@@ -1,0 +1,150 @@
+Task 1 - Data Gathering and Combination
+Write-up: Five Business Questions
+
+============================================================
+Question 1: How much is each member borrowing?
+============================================================
+Goal: A per-member count of checkouts, including members who haven't borrowed anything at all.
+
+Query used:
+SELECT m.member_id, m.first_name, m.last_name, COUNT(c.checkout_id) AS total_checkouts
+FROM members m
+LEFT JOIN checkouts c ON m.member_id = c.member_id
+GROUP BY m.member_id, m.first_name, m.last_name
+ORDER BY total_checkouts DESC;
+
+Reasoning:
+A LEFT JOIN was used instead of a regular JOIN because a regular JOIN would drop
+any member who has zero checkouts (since there would be no matching row in the
+checkouts table for them). The LEFT JOIN keeps every member from the members
+table and simply counts zero for members with no matching checkouts.
+
+Result summary:
+80 members total. Checkout counts ranged from 25 (most active member, Aya Wahba)
+down to 0 (18 members have never borrowed a book).
+
+============================================================
+Question 2: Which books match a chosen author pattern?
+============================================================
+Goal: Search the catalog based on a letter/pattern.
+Pattern chosen: author names starting with the letter "A".
+
+Query used:
+SELECT book_id, title, author
+FROM books
+WHERE author LIKE 'A%';
+
+Reasoning:
+The LIKE operator with the wildcard % is the standard way to do partial text
+matching in SQL. 'A%' matches any author name that starts with "A", regardless
+of what comes after it.
+
+Result:
+6 books matched, written by 3 authors: Amina Darwish, Adel Roushdy, and Aya Hafez.
+
+============================================================
+Question 3: What are the most popular books?
+============================================================
+Goal: The five most-borrowed titles, ranked by checkout count.
+
+Query used:
+SELECT b.book_id, b.title, b.author, COUNT(c.checkout_id) AS times_borrowed
+FROM checkouts c
+JOIN books b ON c.book_id = b.book_id
+GROUP BY b.book_id, b.title, b.author
+ORDER BY times_borrowed DESC
+LIMIT 5;
+
+Reasoning:
+A regular JOIN is enough here (not LEFT JOIN) because we only care about books
+that have actually been checked out at least once - a book with zero checkouts
+wouldn't be a "most popular book" anyway. GROUP BY collapses all checkout rows
+for the same book into one row with a total count, and ORDER BY + LIMIT gets
+the top 5.
+
+Result:
+1. The Silver Kite (Amina Darwish) - 57 times
+2. Fossils and Fireflies (Dalia Serry) - 55 times
+3. Circuits for Beginners (Galal Mounir) - 46 times
+4. Kites Over Cairo (Jasmine Wahdan) - 38 times
+5. Storms and Sailboats (Mahmoud Rafei) - 25 times
+
+============================================================
+Question 4: Who are the most active readers?
+============================================================
+Goal: The ten members who've borrowed the most books, ranked highest to lowest.
+
+Query used:
+SELECT m.member_id, m.first_name, m.last_name, COUNT(c.checkout_id) AS total_checkouts
+FROM members m
+JOIN checkouts c ON m.member_id = c.member_id
+GROUP BY m.member_id, m.first_name, m.last_name
+ORDER BY total_checkouts DESC
+LIMIT 10;
+
+Reasoning:
+This is similar to Question 1, but here a regular JOIN was used instead of a
+LEFT JOIN, because members with zero checkouts can never be among the "most
+active readers" - they would just show up at the bottom with a count of zero,
+which isn't useful for this specific question.
+
+Result (top 10):
+Aya Wahba (25), Sherif Saleh (21), Ziad Saleh (19), Nour Nabil (18),
+Mostafa Fouad (18), Ahmed Shafik (17), Youssef Hegazy (17), Adam Fahmy (17),
+Reem Osman (16), Sara Rashad (16)
+
+============================================================
+Question 5: What does a neighborhood's activity look like further back in time?
+============================================================
+Goal: Checkouts from one chosen neighborhood, ordered newest to oldest, skipping
+the 10 most recent.
+Neighborhood chosen: Maadi
+
+Query used:
+SELECT c.checkout_id, m.member_id, m.first_name, m.last_name, m.neighborhood,
+       c.book_id, c.checkout_date
+FROM checkouts c
+JOIN members m ON c.member_id = m.member_id
+WHERE m.neighborhood = 'Maadi'
+ORDER BY c.checkout_date DESC
+LIMIT -1 OFFSET 10;
+
+Reasoning:
+ORDER BY checkout_date DESC sorts checkouts from newest to oldest. OFFSET 10
+skips the first 10 rows in that sorted order (the 10 most recent), so what's
+returned is everything after that point - i.e., "further back in time."
+LIMIT -1 is SQLite's way of saying "no limit on how many rows to return" while
+still allowing OFFSET to be used.
+
+Result:
+77 checkouts returned from the Maadi neighborhood, ranging from 2025-09-04 down
+to 2024-01-02 (the 10 most recent Maadi checkouts, from later dates, were
+excluded as required).
+
+============================================================
+Reflection: Web Page vs. Database as Data Sources
+============================================================
+The database and the Reading Kickoff web page are fundamentally different kinds
+of sources, and that difference shaped how each one had to be handled.
+
+The database is built to be queried by a program. Its data is already
+structured into clear tables with defined columns and types, so getting data
+out of it is just a matter of writing the right SQL query - the database engine
+does the work of finding, filtering, and joining the data reliably.
+
+The Reading Kickoff page, on the other hand, is built to be read by a person in
+a browser, not consumed by a program. Its data is embedded inside HTML markup
+(table rows, table cells, headings, styling) rather than delivered in a
+predictable, structured format like an API would provide. To use it, I had to
+treat the page as text and pull the checkout information out from between HTML
+tags using pattern matching, rather than simply running a query.
+
+This distinction mattered for the project because it meant the two sources
+needed different techniques and different amounts of caution. With the
+database, I could trust the structure completely. With the HTML page, I had to
+be more careful - for example, skipping the header row (which uses <th> instead
+of <td>), making sure the number of cells matched what I expected before trusting
+a row, and converting text values (like IDs, which came through as strings) into
+the correct data types before using them. If the page's layout had been slightly
+different, the extraction logic would have needed to change - something that
+would never be a concern with a proper database query.
