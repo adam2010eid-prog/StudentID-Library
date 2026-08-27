@@ -96,8 +96,8 @@ Reem Osman (16), Sara Rashad (16)
 ============================================================
 Question 5: What does a neighborhood's activity look like further back in time?
 ============================================================
-Goal: Checkouts from one chosen neighborhood, ordered newest to oldest, skipping
-the 10 most recent.
+Goal: Exactly 10 checkouts from one chosen neighborhood, ordered newest to
+oldest, coming right after the 10 most recent.
 Neighborhood chosen: Maadi
 
 Query used:
@@ -107,19 +107,28 @@ FROM checkouts c
 JOIN members m ON c.member_id = m.member_id
 WHERE m.neighborhood = 'Maadi'
 ORDER BY c.checkout_date DESC
-LIMIT -1 OFFSET 10;
+LIMIT 10 OFFSET 10;
 
 Reasoning:
 ORDER BY checkout_date DESC sorts checkouts from newest to oldest. OFFSET 10
-skips the first 10 rows in that sorted order (the 10 most recent), so what's
-returned is everything after that point - i.e., "further back in time."
-LIMIT -1 is SQLite's way of saying "no limit on how many rows to return" while
-still allowing OFFSET to be used.
+skips the first 10 rows in that sorted order (the 10 most recent), and
+LIMIT 10 then takes exactly the next 10 rows after that point - i.e., the
+second-most-recent group of 10 checkouts, "further back in time."
 
 Result:
-77 checkouts returned from the Maadi neighborhood, ranging from 2025-09-04 down
-to 2024-01-02 (the 10 most recent Maadi checkouts, from later dates, were
-excluded as required).
+Exactly 10 checkouts returned from the Maadi neighborhood, the ones that come
+right after the 10 most recent Maadi checkouts, ranging from 2025-09-04 down
+to 2025-07-22:
+(9103, 1003, Bassel Hegazy, Maadi, book 513, 2025-09-04)
+(9081, 1017, Adam Badr, Maadi, book 502, 2025-08-25)
+(9001, 1008, Ziad Saleh, Maadi, book 501, 2025-08-23)
+(9050, 1003, Bassel Hegazy, Maadi, book 521, 2025-08-21)
+(9085, 1018, Ahmed Shafik, Maadi, book 525, 2025-08-19)
+(9055, 1015, Hamza Sabry, Maadi, book 525, 2025-08-08)
+(9023, 1018, Ahmed Shafik, Maadi, book 503, 2025-08-04)
+(9004, 1013, Ziad Fouad, Maadi, book 519, 2025-07-27)
+(9051, 1003, Bassel Hegazy, Maadi, book 513, 2025-07-22)
+(9010, 1009, Hassan Saleh, Maadi, book 513, 2025-07-22)
 
 ============================================================
 Reflection: Web Page vs. Database as Data Sources

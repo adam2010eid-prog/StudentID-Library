@@ -88,7 +88,7 @@ FROM checkouts c
 JOIN members m ON c.member_id = m.member_id
 WHERE m.neighborhood = ?
 ORDER BY c.checkout_date DESC
-LIMIT -1 OFFSET 10;
+LIMIT 10 OFFSET 10;
 """
 cursor.execute(query5, (NEIGHBORHOOD,))
 rows5 = cursor.fetchall()
